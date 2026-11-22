@@ -4,8 +4,15 @@ import fs from 'fs';
 import path from 'path';
 import {defineConfig} from 'vite';
 
+function resolveBasePath(rawBase?: string): string {
+  if (!rawBase || rawBase.trim() === '') return '/';
+  const withLeading = rawBase.startsWith('/') ? rawBase : `/${rawBase}`;
+  return withLeading.endsWith('/') ? withLeading : `${withLeading}/`;
+}
+
 export default defineConfig(() => {
   return {
+    base: resolveBasePath(process.env.VITE_BASE_PATH),
     plugins: [
       react(),
       tailwindcss(),

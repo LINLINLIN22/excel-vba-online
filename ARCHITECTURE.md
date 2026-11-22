@@ -145,3 +145,12 @@ npm run build
 ```
 
 執行 `npm run build` 後，可直接將 `dist/` 目錄部署至任意靜態網站空間，無須配置環境變數（`.env`）或執行任何伺服器進程。
+
+---
+
+## 8. GitHub Actions 自動化建置與部署
+
+本專案於 `.github/workflows/` 提供兩組純靜態 CI/CD 設定檔：
+
+- **`.github/workflows/ci.yml`**：於推送至 `main`/`master`、發起 Pull Request 或手動觸發時，自動執行 `npm run lint`（`tsc --noEmit`）與 `npm run build`（`vite build`）。
+- **`.github/workflows/deploy.yml`**：於推送至 `main` 或手動觸發（`workflow_dispatch`）時，透過 `actions/configure-pages` 自動取得儲存庫的 `base_path` 並注入 `VITE_BASE_PATH`，建置靜態 `dist/` 產物並自動部署至 **GitHub Pages**（使用前請於 GitHub Repository `Settings → Pages → Source` 選擇 `GitHub Actions`）。
