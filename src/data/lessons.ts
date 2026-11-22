@@ -91,7 +91,7 @@ End Sub`,
     summary:
       '除了寫入固定數字外，透過 .Formula 屬性可以直接把 Excel 公式寫入空白儲存格，並用 .NumberFormat 設定貨幣或百分比顯示格式。',
     concept:
-      '使用 .Formula = "=SUM(C2:C4)" 寫入的是活公式——之後無論你手動修改 C2 到 C4 的哪一格，總計欄位都會立即跟著重新計算。',
+      '使用 .Formula = "=SUM(B2:B3)" 寫入的是活公式——之後只要透過 VBA 修改 B2 到 B3 的任一數值，總計欄位都會立即跟著重新計算。',
     code: `Sub BuildFormulaOnBlank()
     Range("A1").Value = "Item"
     Range("B1").Value = "Price"

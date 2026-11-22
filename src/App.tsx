@@ -7,12 +7,8 @@ import { SpreadsheetPane } from './components/SpreadsheetPane';
 import { ActiveTab, TopBar } from './components/TopBar';
 import { VbaEditorPane } from './components/VbaEditorPane';
 import { createBlankSheet, EXAMPLE_PRESETS } from './data/examples';
-import { coordToAddress, iterateRangeCoords } from './spreadsheet/addressing';
-import { recalculateSheets } from './spreadsheet/formulaEngine';
 import {
-  CellCoord,
   CellRange,
-  CellStyle,
   ExamplePreset,
   ExecutionResult,
   SheetData,
@@ -32,6 +28,12 @@ interface SavedSession {
   activeModuleId: string;
 }
 
+interface WorkbookSnapshot {
+  sheets: SheetData[];
+  activeSheetId: string;
+  selectedRange: CellRange;
+}
+
 function cloneSheets(sheets: SheetData[]): SheetData[] {
   return sheets.map((s) => ({
     ...s,
@@ -43,6 +45,17 @@ function cloneSheets(sheets: SheetData[]): SheetData[] {
       ])
     ),
   }));
+}
+
+function cloneSnapshot(snap: WorkbookSnapshot): WorkbookSnapshot {
+  return {
+    sheets: cloneSheets(snap.sheets),
+    activeSheetId: snap.activeSheetId,
+    selectedRange: {
+      start: { ...snap.selectedRange.start },
+      end: { ...snap.selectedRange.end },
+    },
+  };
 }
 
 function buildInitialState() {
@@ -80,17 +93,11 @@ function buildInitialState() {
     // Ignore invalid storage
   }
 
-  const initialSheets = cloneSheets(defaultPreset.sheets);
-  const initialSelected = defaultPreset.selectedRange ?? {
-    start: { row: 1, col: 1 },
-    end: { row: 1, col: 1 },
-  };
-
   return {
     activePresetId: defaultPreset.id,
-    sheets: initialSheets,
-    activeSheetId: initialSheets[0].id,
-    selectedRange: initialSelected,
+    sheets: blankSheets,
+    activeSheetId: blankSheets[0].id,
+    selectedRange: blankSelected,
     modules: [
       {
         id: 'mod-1',
@@ -193,6 +200,21 @@ export default function App() {
     initial.executionResult
   );
 
+  // VBA-only Undo / Redo history stack
+  const [historyState, setHistoryState] = useState<{
+    items: WorkbookSnapshot[];
+    index: number;
+  }>(() => ({
+    items: [
+      cloneSnapshot({
+        sheets: initial.sheets,
+        activeSheetId: initial.activeSheetId,
+        selectedRange: initial.selectedRange,
+      }),
+    ],
+    index: 0,
+  }));
+
   // Persist active preset and VBA modules locally in browser (spreadsheet always loads blank)
   useEffect(() => {
     try {
@@ -217,7 +239,6 @@ export default function App() {
     [modules, activeModuleId]
   );
 
-  // Real-time syntax check (debounced slightly or memoized directly since lexer/linter is <1ms)
   const diagnostics = useMemo(() => lintVbaCode(activeModule.code), [activeModule.code]);
 
   const handleRunMacro = useCallback(
@@ -234,13 +255,53 @@ export default function App() {
         selectedRange: targetRange,
       });
 
-      setSheets(output.sheets);
-      setActiveSheetId(output.activeSheetId);
-      setSelectedRange(output.selectedRange);
       setExecutionResult(output.result);
+
+      if (output.result.status === 'success') {
+        const nextSnap = cloneSnapshot({
+          sheets: output.sheets,
+          activeSheetId: output.activeSheetId,
+          selectedRange: output.selectedRange,
+        });
+        setSheets(cloneSheets(nextSnap.sheets));
+        setActiveSheetId(nextSnap.activeSheetId);
+        setSelectedRange(nextSnap.selectedRange);
+
+        setHistoryState((prev) => {
+          const base = prev.items.slice(0, prev.index + 1);
+          const nextItems = [...base, nextSnap];
+          return {
+            items: nextItems,
+            index: nextItems.length - 1,
+          };
+        });
+      }
     },
     [activeModule.code, sheets, activeSheetId, selectedRange]
   );
+
+  const canUndo = historyState.index > 0;
+  const canRedo = historyState.index < historyState.items.length - 1;
+
+  const handleUndo = useCallback(() => {
+    if (historyState.index <= 0) return;
+    const prevIdx = historyState.index - 1;
+    const snap = cloneSnapshot(historyState.items[prevIdx]);
+    setHistoryState((prev) => ({ ...prev, index: prevIdx }));
+    setSheets(snap.sheets);
+    setActiveSheetId(snap.activeSheetId);
+    setSelectedRange(snap.selectedRange);
+  }, [historyState]);
+
+  const handleRedo = useCallback(() => {
+    if (historyState.index >= historyState.items.length - 1) return;
+    const nextIdx = historyState.index + 1;
+    const snap = cloneSnapshot(historyState.items[nextIdx]);
+    setHistoryState((prev) => ({ ...prev, index: nextIdx }));
+    setSheets(snap.sheets);
+    setActiveSheetId(snap.activeSheetId);
+    setSelectedRange(snap.selectedRange);
+  }, [historyState]);
 
   // Global shortcut: Ctrl/Cmd + Enter when in Playground
   useEffect(() => {
@@ -259,11 +320,10 @@ export default function App() {
 
   const handleLoadPreset = (
     preset: ExamplePreset,
-    autoRun = false,
     customCode?: string
   ) => {
     const freshSheets = [createBlankSheet('Sheet1')];
-    const freshRange = preset.selectedRange ?? {
+    const freshRange: CellRange = {
       start: { row: 1, col: 1 },
       end: { row: 1, col: 1 },
     };
@@ -281,154 +341,26 @@ export default function App() {
       return updated;
     });
 
-    if (autoRun) {
-      const output = executeVbaMacro({
-        code: nextCode,
-        sheets: freshSheets,
-        activeSheetId: freshSheets[0].id,
-        selectedRange: freshRange,
-      });
-      setSheets(output.sheets);
-      setActiveSheetId(output.activeSheetId);
-      setSelectedRange(output.selectedRange);
-      setExecutionResult(output.result);
-    } else {
-      setSheets(freshSheets);
-      setActiveSheetId(freshSheets[0].id);
-      setSelectedRange(freshRange);
-      setExecutionResult({
-        status: 'idle',
-        headline: 'Ready',
-        detail: 'Click Run macro to execute.',
-        durationMs: 0,
-        logs: [],
-        changedCellsCount: 0,
-      });
-    }
-
-    setActiveTab('playground');
-  };
-
-  const handleUpdateCell = (coord: CellCoord, rawValue: string) => {
-    setSheets((prev) => {
-      const updated = prev.map((sh) => {
-        if (sh.id !== activeSheetId) return sh;
-        const addr = coordToAddress(coord);
-        const existing = sh.cells[addr] ?? { value: null };
-        let nextCell;
-        if (rawValue.trim().startsWith('=')) {
-          nextCell = { ...existing, formula: rawValue.trim(), value: rawValue.trim() };
-        } else if (rawValue.trim() === '') {
-          nextCell = { ...existing, formula: undefined, value: null };
-        } else {
-          const num = Number(rawValue);
-          const parsedVal =
-            rawValue.trim() !== '' && Number.isFinite(num) ? num : rawValue;
-          nextCell = { ...existing, formula: undefined, value: parsedVal };
-        }
-        return {
-          ...sh,
-          cells: {
-            ...sh.cells,
-            [addr]: nextCell,
-          },
-        };
-      });
-      return recalculateSheets(updated);
+    const blankSnap = cloneSnapshot({
+      sheets: freshSheets,
+      activeSheetId: freshSheets[0].id,
+      selectedRange: freshRange,
     });
-  };
 
-  const handleApplyStyle = (range: CellRange, stylePatch: Partial<CellStyle>) => {
-    const coords = iterateRangeCoords(range);
-    setSheets((prev) =>
-      prev.map((sh) => {
-        if (sh.id !== activeSheetId) return sh;
-        const nextCells = { ...sh.cells };
-        for (const c of coords) {
-          const addr = coordToAddress(c);
-          const existing = nextCells[addr] ?? { value: null };
-          nextCells[addr] = {
-            ...existing,
-            style: { ...(existing.style ?? {}), ...stylePatch },
-          };
-        }
-        return { ...sh, cells: nextCells };
-      })
-    );
-  };
-
-  const handleAddSheet = () => {
-    const nextNum = sheets.length + 1;
-    const newId = `sheet-${Date.now()}`;
-    const newSheet: SheetData = {
-      id: newId,
-      name: `Sheet${nextNum}`,
-      rows: 15,
-      cols: 7,
-      cells: {},
-      colWidths: { 1: 102, 2: 76, 3: 84, 4: 74, 5: 74, 6: 74, 7: 74 },
-    };
-    setSheets((prev) => [...prev, newSheet]);
-    setActiveSheetId(newId);
-    setSelectedRange({ start: { row: 1, col: 1 }, end: { row: 1, col: 1 } });
-  };
-
-  const handleResetExample = () => {
-    const freshSheets = cloneSheets(activePreset.sheets);
-    setSheets(freshSheets);
-    setActiveSheetId(freshSheets[0].id);
-    setSelectedRange({ start: { row: 1, col: 1 }, end: { row: 1, col: 1 } });
+    setSheets(blankSnap.sheets);
+    setActiveSheetId(blankSnap.activeSheetId);
+    setSelectedRange(blankSnap.selectedRange);
+    setHistoryState({ items: [blankSnap], index: 0 });
     setExecutionResult({
       status: 'idle',
-      headline: 'Workbook reset',
-      detail: 'Restored initial data. Click Run macro to test your code.',
+      headline: 'Ready',
+      detail: 'Click Run macro to execute.',
       durationMs: 0,
       logs: [],
       changedCellsCount: 0,
     });
-  };
 
-  const handleClearSheet = () => {
-    setSheets((prev) =>
-      prev.map((sh) => (sh.id === activeSheetId ? { ...sh, cells: {} } : sh))
-    );
-  };
-
-  const handleInsertSampleRow = () => {
-    const sh = sheets.find((s) => s.id === activeSheetId) ?? sheets[0];
-    let lastUsedRow = 1;
-    for (const addr of Object.keys(sh.cells)) {
-      const m = /(\d+)$/.exec(addr);
-      if (m) lastUsedRow = Math.max(lastUsedRow, parseInt(m[1], 10));
-    }
-    const targetRow = Math.min(sh.rows, lastUsedRow + 1);
-    handleUpdateCell({ row: targetRow, col: 1 }, 'Stylus Pen');
-    handleUpdateCell({ row: targetRow, col: 2 }, '12');
-    handleUpdateCell({ row: targetRow, col: 3 }, '360');
-  };
-
-  const handleExportCsv = () => {
-    const sh = sheets.find((s) => s.id === activeSheetId) ?? sheets[0];
-    const lines: string[] = [];
-    for (let r = 1; r <= sh.rows; r++) {
-      const rowVals: string[] = [];
-      let hasData = false;
-      for (let c = 1; c <= sh.cols; c++) {
-        const cell = sh.cells[coordToAddress({ row: r, col: c })];
-        const val = cell?.value ?? '';
-        if (val !== '' && val !== null) hasData = true;
-        const str = String(val).replace(/"/g, '""');
-        rowVals.push(str.includes(',') ? `"${str}"` : str);
-      }
-      if (hasData) lines.push(rowVals.join(','));
-    }
-    const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${sh.name}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    setActiveTab('playground');
   };
 
   const handleAddModule = () => {
@@ -484,7 +416,7 @@ export default function App() {
                   value={activePresetId}
                   onChange={(e) => {
                     const chosen = EXAMPLE_PRESETS.find((p) => p.id === e.target.value);
-                    if (chosen) handleLoadPreset(chosen, false);
+                    if (chosen) handleLoadPreset(chosen);
                   }}
                   className="h-9 min-w-[220px] px-3 rounded-lg border border-[#D4DFD8] dark:border-[#243B2E] bg-white dark:bg-[#14241B] text-xs font-medium text-[#111C16] dark:text-[#E8F1EC] focus:outline-none focus:ring-2 focus:ring-[#157347] cursor-pointer"
                 >
@@ -525,14 +457,13 @@ export default function App() {
                   activeSheetId={activeSheetId}
                   selectedRange={selectedRange}
                   onSelectSheet={setActiveSheetId}
-                  onAddSheet={handleAddSheet}
                   onSelectRange={setSelectedRange}
-                  onUpdateCell={handleUpdateCell}
-                  onApplyStyle={handleApplyStyle}
-                  onResetExample={handleResetExample}
-                  onClearSheet={handleClearSheet}
-                  onExportCsv={handleExportCsv}
-                  onInsertSampleRow={handleInsertSampleRow}
+                  canUndo={canUndo}
+                  canRedo={canRedo}
+                  historyIndex={historyState.index}
+                  historyLength={historyState.items.length}
+                  onUndo={handleUndo}
+                  onRedo={handleRedo}
                 />
               </div>
 
@@ -630,14 +561,14 @@ export default function App() {
         {activeTab === 'examples' && (
           <ExamplesView
             activePresetId={activePresetId}
-            onLoadPreset={(preset) => handleLoadPreset(preset, false)}
+            onLoadPreset={(preset) => handleLoadPreset(preset)}
           />
         )}
 
         {activeTab === 'learn' && (
           <LearnView
             onTryInPlayground={(preset, customCode) =>
-              handleLoadPreset(preset, false, customCode)
+              handleLoadPreset(preset, customCode)
             }
           />
         )}
