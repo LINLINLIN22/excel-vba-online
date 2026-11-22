@@ -1,8 +1,7 @@
 import { ExamplePreset, SheetData } from '../types/workbook';
 
-function baseSheet(
-  name: string,
-  cells: SheetData['cells'],
+export function createBlankSheet(
+  name = 'Sheet1',
   rows = 15,
   cols = 7
 ): SheetData {
@@ -11,7 +10,7 @@ function baseSheet(
     name,
     rows,
     cols,
-    cells,
+    cells: {},
     colWidths: {
       1: 102,
       2: 76,
@@ -24,58 +23,113 @@ function baseSheet(
   };
 }
 
+function baseSheet(
+  name: string,
+  cells: SheetData['cells'],
+  rows = 15,
+  cols = 7
+): SheetData {
+  return {
+    ...createBlankSheet(name, rows, cols),
+    cells,
+  };
+}
+
 export const EXAMPLE_PRESETS: ExamplePreset[] = [
   {
-    id: 'format-sales',
-    title: 'Format a sales report',
-    category: 'Formatting',
-    difficulty: 'Beginner',
+    id: 'blank-sales-report',
+    title: '從空白工作表建立報表',
+    category: '空白起手',
+    difficulty: '初階',
     description:
-      'Style a table header with RGB colors, apply currency formatting, and insert a dynamic SUM total row.',
-    tipTitle: 'See the connection',
+      '從完全空白的 Excel 表格出發，用 VBA 填入商品銷售資料、套用標題樣式並加入自動加總公式。',
+    tipTitle: '從空白表格開始認識 VBA',
     tipBody:
-      'Range("A1:C1") refers to cells A1 through C1. Try changing the header color, then run your macro again.',
-    selectedRange: { start: { row: 6, col: 3 }, end: { row: 6, col: 3 } },
-    code: `Sub FormatSales()
-    ' Give the report a little polish
+      '左邊目前是一張空白的 Excel 工作表。按下「Run macro」後，VBA 會依序寫入欄位內容、套用 RGB 色彩並建立 =SUM(C2:C4) 加總公式。',
+    selectedRange: { start: { row: 1, col: 1 }, end: { row: 1, col: 1 } },
+    code: `Sub BuildSalesReport()
+    ' 從空白工作表填入標題與資料
+    Range("A1").Value = "Product"
+    Range("B1").Value = "Units"
+    Range("C1").Value = "Revenue"
+
+    Range("A2").Value = "Notebook"
+    Range("B2").Value = 24
+    Range("C2").Value = 240
+
+    Range("A3").Value = "Desk lamp"
+    Range("B3").Value = 18
+    Range("C3").Value = 540
+
+    Range("A4").Value = "Planner"
+    Range("B4").Value = 32
+    Range("C4").Value = 480
+
+    ' 美化標題列樣式
     With Range("A1:C1")
         .Interior.Color = RGB(33, 115, 70)
         .Font.Color = RGB(255, 255, 255)
         .Font.Bold = True
     End With
 
+    ' 套用貨幣格式與加總公式
     Range("C2:C6").NumberFormat = "$#,##0"
     Range("A6").Value = "Total"
     Range("C6").Formula = "=SUM(C2:C4)"
     Range("A6:C6").Font.Bold = True
 End Sub`,
-    sheets: [
-      baseSheet('Sheet1', {
-        A1: { value: 'Product' },
-        B1: { value: 'Units' },
-        C1: { value: 'Revenue' },
-        A2: { value: 'Notebook' },
-        B2: { value: 24 },
-        C2: { value: 240 },
-        A3: { value: 'Desk lamp' },
-        B3: { value: 18 },
-        C3: { value: 540 },
-        A4: { value: 'Planner' },
-        B4: { value: 32 },
-        C4: { value: 480 },
-      }),
-    ],
+    sheets: [createBlankSheet('Sheet1')],
+  },
+  {
+    id: 'blank-multiplication-grid',
+    title: '在空白表格產生九九乘法表',
+    category: '迴圈與邏輯',
+    difficulty: '初階',
+    description:
+      '利用雙層 For...Next 迴圈，直接將九九乘法表自動填入空白工作表並標記標題列與欄。',
+    tipTitle: '巢狀迴圈搭配 Cells(列, 欄)',
+    tipBody:
+      '在空白表格中使用 Cells(r, c) 可以用數字變數動態指定列與欄，非常適合批次產生表格或矩陣資料。',
+    selectedRange: { start: { row: 1, col: 1 }, end: { row: 1, col: 1 } },
+    code: `Sub GenerateTimesTable()
+    Dim r As Integer
+    Dim c As Integer
+
+    Cells(1, 1).Value = "×"
+    With Range("A1")
+        .Interior.Color = RGB(33, 115, 70)
+        .Font.Color = RGB(255, 255, 255)
+        .Font.Bold = True
+        .HorizontalAlignment = xlCenter
+    End With
+
+    For r = 1 To 6
+        Cells(r + 1, 1).Value = r
+        Cells(r + 1, 1).Font.Bold = True
+        Cells(r + 1, 1).HorizontalAlignment = xlCenter
+
+        Cells(1, r + 1).Value = r
+        Cells(1, r + 1).Font.Bold = True
+        Cells(1, r + 1).HorizontalAlignment = xlCenter
+
+        For c = 1 To 6
+            Cells(r + 1, c + 1).Value = r * c
+            Cells(r + 1, c + 1).HorizontalAlignment = xlCenter
+        Next c
+    Next r
+End Sub`,
+    sheets: [createBlankSheet('Sheet1')],
   },
   {
     id: 'highlight-low-stock',
-    title: 'Highlight low inventory',
-    category: 'Loops & Logic',
-    difficulty: 'Beginner',
+    title: '低庫存自動標記警示',
+    category: '迴圈與邏輯',
+    difficulty: '初階',
     description:
-      'Loop over stock levels with For...Next and automatically flag items below reorder threshold in amber or crimson.',
-    tipTitle: 'Loops meet conditional logic',
+      '使用 For...Next 逐列掃描庫存數量，低於安全庫存時自動填入「Reorder」並以紅底標示警示。',
+    tipTitle: '迴圈結合條件判斷',
     tipBody:
-      'Cells(r, 2).Value reads row r, column B dynamically inside the For loop so every row is inspected automatically.',
+      '透過 Cells(r, 2).Value 動態讀取第 r 列、第 B 欄數值，再用 If...Else 為每列填入對應狀態與顏色。',
     selectedRange: { start: { row: 2, col: 4 }, end: { row: 6, col: 4 } },
     code: `Sub FlagLowStock()
     Dim r As Integer
@@ -124,14 +178,14 @@ End Sub`,
   },
   {
     id: 'commission-tiers',
-    title: 'Calculate sales commissions',
-    category: 'Business Logic',
-    difficulty: 'Intermediate',
+    title: '業務階梯獎金試算',
+    category: '商業計算',
+    difficulty: '中階',
     description:
-      'Compute tiered commission rates with ElseIf branches, format percentages, and print summary metrics with Debug.Print.',
-    tipTitle: 'Debug.Print in action',
+      '以 ElseIf 判斷各級業績對應抽成比例，套用百分比與貨幣格式，並透過 Debug.Print 輸出總獎金。',
+    tipTitle: 'Debug.Print 即時除錯輸出',
     tipBody:
-      'Use Debug.Print to inspect intermediate totals in the Execution console without modifying any spreadsheet cells.',
+      '利用 Debug.Print 可將計算過程中的變數數值印出到右側 Execution 區域，無須改動儲存格即可檢查結果。',
     selectedRange: { start: { row: 2, col: 4 }, end: { row: 6, col: 4 } },
     code: `Sub CalculateCommissions()
     Dim r As Integer
@@ -190,14 +244,14 @@ End Sub`,
   },
   {
     id: 'clean-customer-text',
-    title: 'Clean messy text entries',
-    category: 'Data Cleaning',
-    difficulty: 'Beginner',
+    title: '批次清理文字與大小寫',
+    category: '資料清理',
+    difficulty: '初階',
     description:
-      'Trim extra spaces and standardize email and region casing across rows using Trim, LCase, and UCase.',
-    tipTitle: 'Built-in string helpers',
+      '使用 For Each 搭配 Trim、LCase、UCase 快速清除多餘空白並統一 Email 與地區代碼大小寫格式。',
+    tipTitle: '字串清理實用函式',
     tipBody:
-      'For Each cell In Range(...) iterates through every cell in a range cleanly—ideal for cleaning messy imported columns.',
+      'For Each cell In Range(...) 會逐一走訪指定範圍內的每個儲存格，特別適合清洗匯入後的雜亂文字資料。',
     selectedRange: { start: { row: 2, col: 1 }, end: { row: 5, col: 3 } },
     code: `Sub CleanCustomerList()
     Dim cell As Range
@@ -242,68 +296,15 @@ End Sub`,
     ],
   },
   {
-    id: 'dynamic-last-row',
-    title: 'Find last row with End(xlUp)',
-    category: 'Automation',
-    difficulty: 'Intermediate',
-    description:
-      'Locate the bottom of a variable-length table with Cells(Rows.Count, 1).End(xlUp).Row and append a dynamic summary.',
-    tipTitle: 'Why End(xlUp) matters',
-    tipBody:
-      'Instead of hardcoding row 6, End(xlUp) finds the true last populated row even when new data is added later.',
-    selectedRange: { start: { row: 1, col: 1 }, end: { row: 8, col: 3 } },
-    code: `Sub SummarizeToLastRow()
-    Dim lastRow As Long
-    Dim totalRow As Long
-
-    lastRow = Cells(Rows.Count, 1).End(xlUp).Row
-    totalRow = lastRow + 1
-
-    Cells(totalRow, 1).Value = "Grand Total"
-    Cells(totalRow, 2).Formula = "=SUM(B2:B" & lastRow & ")"
-    Cells(totalRow, 3).Formula = "=AVERAGE(C2:C" & lastRow & ")"
-
-    Range("B2:B" & totalRow).NumberFormat = "$#,##0"
-    Range("C2:C" & totalRow).NumberFormat = "$#,##0.00"
-
-    With Range("A" & totalRow & ":C" & totalRow)
-        .Font.Bold = True
-        .Interior.Color = RGB(232, 244, 237)
-        .Font.Color = RGB(20, 83, 45)
-    End With
-
-    Debug.Print "Detected last data row: " & lastRow
-End Sub`,
-    sheets: [
-      baseSheet('Sheet1', {
-        A1: { value: 'Department' },
-        B1: { value: 'Q1 Spend' },
-        C1: { value: 'Avg Order' },
-        A2: { value: 'Design' },
-        B2: { value: 4200 },
-        C2: { value: 350 },
-        A3: { value: 'Engineering' },
-        B3: { value: 12800 },
-        C3: { value: 640 },
-        A4: { value: 'Marketing' },
-        B4: { value: 7600 },
-        C4: { value: 475 },
-        A5: { value: 'Operations' },
-        B5: { value: 5100 },
-        C5: { value: 255 },
-      }),
-    ],
-  },
-  {
     id: 'multi-sheet-rollup',
-    title: 'Multi-sheet KPI rollup',
-    category: 'Multi-Sheet',
-    difficulty: 'Intermediate',
+    title: '跨工作表 KPI 彙總',
+    category: '自動化',
+    difficulty: '中階',
     description:
-      'Read numbers from a second worksheet using Sheets("Orders") and WorksheetFunction.Sum, then build an executive summary.',
-    tipTitle: 'Cross-sheet references',
+      '透過 Sheets("Orders") 與 WorksheetFunction 跨頁讀取訂單金額，在 Summary 分頁自動產出關鍵指標。',
+    tipTitle: '跨工作表參照技巧',
     tipBody:
-      'Switch to the Orders tab at the bottom of the workbook to see the source rows that Sheets("Orders") summarizes.',
+      '切換下方的 Orders 工作表分頁，即可檢視 Sheets("Orders") 實際讀取並彙總的原始訂單明細。',
     selectedRange: { start: { row: 1, col: 1 }, end: { row: 5, col: 2 } },
     code: `Sub BuildSummary()
     Dim orderTotal As Double

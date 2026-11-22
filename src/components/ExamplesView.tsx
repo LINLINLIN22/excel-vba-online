@@ -12,16 +12,16 @@ export function ExamplesView({
   activePresetId,
   onLoadPreset,
 }: ExamplesViewProps) {
-  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [selectedCategory, setSelectedCategory] = useState<string>('全部');
 
   const categories = useMemo(
-    () => ['All', ...Array.from(new Set(EXAMPLE_PRESETS.map((p) => p.category)))],
+    () => ['全部', ...Array.from(new Set(EXAMPLE_PRESETS.map((p) => p.category)))],
     []
   );
 
   const filtered = useMemo(
     () =>
-      selectedCategory === 'All'
+      selectedCategory === '全部'
         ? EXAMPLE_PRESETS
         : EXAMPLE_PRESETS.filter((p) => p.category === selectedCategory),
     [selectedCategory]
@@ -33,17 +33,17 @@ export function ExamplesView({
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div className="space-y-1.5">
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#111C16] dark:text-[#E8F1EC] text-balance">
-            Ready-to-run VBA examples
+            即開即用的 VBA 範例庫
           </h1>
           <p className="text-sm text-[#526359] dark:text-[#9CB3A6] max-w-2xl">
-            Pick a practical Excel automation scenario to load its sample workbook and macro straight into the playground.
+            挑選常見的 Excel 自動化應用情境，一鍵將對應的工作表與巨集程式碼載入 Playground 測試執行。
           </p>
         </div>
 
         {/* Interactive Category Filter */}
         <div
           role="group"
-          aria-label="Filter examples by category"
+          aria-label="依分類篩選範例"
           className="flex flex-wrap items-center gap-1.5 p-1 rounded-lg border border-[#DCE5DF] dark:border-[#233A2C] bg-white dark:bg-[#14241B]"
         >
           {categories.map((cat) => {
@@ -93,7 +93,7 @@ export function ExamplesView({
                     <>
                       <span aria-hidden="true">·</span>
                       <span className="text-[#157347] dark:text-[#6EE7A0] font-medium">
-                        Active
+                        目前使用中
                       </span>
                     </>
                   )}
@@ -121,7 +121,7 @@ export function ExamplesView({
                   className="inline-flex items-center gap-1.5 text-xs font-medium text-[#526359] dark:text-[#9CB3A6] hover:text-[#111C16] dark:hover:text-[#E8F1EC] transition-colors"
                 >
                   <Code2 className="w-3.5 h-3.5" />
-                  <span>Open code</span>
+                  <span>開啟程式碼</span>
                 </button>
 
                 <button
@@ -130,7 +130,7 @@ export function ExamplesView({
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#157347] hover:bg-[#12633B] text-white text-xs font-medium transition-colors whitespace-nowrap"
                 >
                   <Play className="w-3 h-3 fill-current" />
-                  <span>Load &amp; run</span>
+                  <span>載入並執行</span>
                   <ArrowRight className="w-3 h-3" />
                 </button>
               </div>

@@ -4,102 +4,137 @@ export const LEARN_LESSONS: LearnLesson[] = [
   {
     id: 'lesson-ranges',
     number: '01',
-    title: 'Targeting Cells with Range & Cells',
+    title: '在空白表格中指定儲存格：Range 與 Cells',
     summary:
-      'Every Excel macro starts by pointing at cells. Use Range("A1:C1") for fixed addresses and Cells(row, col) when row numbers change in a loop.',
+      '寫 VBA 的第一步，是告訴 Excel 要操作哪一格。面對空白工作表時，你可以用 Range("A1") 指定固定位址，或用 Cells(列, 欄) 以數字座標填入內容。',
     concept:
-      'Range accepts standard A1 notation ("B2", "A1:C5"), while Cells takes numeric (row, column) coordinates so you can iterate with variables.',
-    code: `Sub TargetCells()
+      'Range 接受標準的 A1 參照字串（如 "B2"、"A1:C1"），而 Cells(row, col) 則使用列號與欄號，非常適合搭配變數與迴圈自動填入資料。',
+    code: `Sub WriteToBlankSheet()
+    ' 在空白工作表寫入標題與第一筆資料
     Range("A1").Value = "Product"
-    Range("B1:C1").Font.Bold = True
+    Range("B1").Value = "Units"
+    Range("A1:B1").Font.Bold = True
+
     Cells(2, 1).Value = "Notebook"
     Cells(2, 2).Value = 24
 End Sub`,
     keyTakeaways: [
-      'Range("A1").Value reads or writes a single cell.',
-      'Range("A1:C1") applies styles or values across an entire rectangle at once.',
-      'Cells(2, 3) points to row 2, column 3 (C2) using numbers.',
+      'Range("A1").Value 可讀取或寫入單一儲存格的內容。',
+      'Range("A1:B1") 能一次將粗體或顏色套用到整個範圍。',
+      'Cells(2, 1) 代表第 2 列、第 1 欄，也就是 A2 儲存格。',
     ],
-    presetId: 'format-sales',
+    presetId: 'blank-sales-report',
   },
   {
     id: 'lesson-with',
     number: '02',
-    title: 'Writing Clean Styles with With ... End With',
+    title: '使用 With ... End With 整理空白表格樣式',
     summary:
-      'Instead of repeating Range("A1:C1") on every line, open a With block and start each property with a leading dot.',
+      '當我們要替空白表格建立標題列並同時設定底色、文字顏色、粗體與置中對齊時，使用 With 區塊可以避免重複撰寫冗長的 Range("A1:C1")。',
     concept:
-      'With blocks keep your macros readable and reduce typing mistakes. You can configure fill colors, font colors, borders, and alignment together.',
-    code: `With Range("A1:C1")
-    .Interior.Color = RGB(33, 115, 70)
-    .Font.Color = RGB(255, 255, 255)
-    .Font.Bold = True
-    .HorizontalAlignment = xlCenter
-End With`,
+      '進入 With 區塊後，每一行只要以點號「.」開頭即可存取該物件的屬性，不僅程式碼更精簡，也更容易閱讀與維護。',
+    code: `Sub StyleBlankHeader()
+    Range("A1").Value = "Item"
+    Range("B1").Value = "Qty"
+    Range("C1").Value = "Amount"
+
+    With Range("A1:C1")
+        .Interior.Color = RGB(33, 115, 70)
+        .Font.Color = RGB(255, 255, 255)
+        .Font.Bold = True
+        .HorizontalAlignment = xlCenter
+    End With
+End Sub`,
     keyTakeaways: [
-      'RGB(red, green, blue) accepts values from 0 to 255.',
-      'Always close every With block with End With.',
-      'Type a dot "." inside the editor to trigger property hints.',
+      'RGB(紅, 綠, 藍) 各色版數值範圍為 0 到 255。',
+      '每個 With 區塊結束時都必須搭配 End With 關閉。',
+      '在編輯器中輸入「.」即可觸發常用屬性與指令提示。',
     ],
-    presetId: 'format-sales',
+    presetId: 'blank-sales-report',
   },
   {
     id: 'lesson-loops',
     number: '03',
-    title: 'Automating Rows with For ... Next & For Each',
+    title: '用 For ... Next 迴圈批次填滿空白工作表',
     summary:
-      'Loops let a 5-line macro process 5 rows or 5,000 rows without manual copy-paste.',
+      '只要幾行迴圈程式，就能在空白表格中自動產生連續編號、清單或計算結果，免去人工逐列複製貼上的時間。',
     concept:
-      'Use For i = start To end when you need row indices, or For Each cell In Range(...) when inspecting every cell in a selection.',
-    code: `For r = 2 To 6
-    If Cells(r, 2).Value < 15 Then
-        Cells(r, 4).Value = "Reorder"
-        Cells(r, 4).Font.Bold = True
-    End If
-Next r`,
+      'For i = 起始值 To 結束值 會依序遞增變數 i，搭配 Cells(i, 欄) 就能從空白工作表快速長出整齊的資料列。',
+    code: `Sub FillRowsFromBlank()
+    Dim r As Integer
+    Range("A1").Value = "No."
+    Range("B1").Value = "Score"
+    Range("C1").Value = "Result"
+    Range("A1:C1").Font.Bold = True
+
+    For r = 2 To 6
+        Cells(r, 1).Value = r - 1
+        Cells(r, 2).Value = (r - 1) * 20
+        If Cells(r, 2).Value >= 60 Then
+            Cells(r, 3).Value = "Pass"
+        Else
+            Cells(r, 3).Value = "Retry"
+        End If
+    Next r
+End Sub`,
     keyTakeaways: [
-      'Dim r As Integer declares your loop counter cleanly.',
-      'Combine If ... Then ... Else ... End If inside loops to classify rows.',
-      'Use Cells(Rows.Count, 1).End(xlUp).Row to detect the last used row dynamically.',
+      '使用 Dim r As Integer 明確宣告迴圈計數變數。',
+      '在迴圈內搭配 If ... Then ... Else ... End If 可自動分類每列狀態。',
+      '可先在空白工作表執行一次，觀察第 2 到第 6 列如何被自動填入。',
     ],
-    presetId: 'highlight-low-stock',
+    presetId: 'blank-multiplication-grid',
   },
   {
     id: 'lesson-formulas',
     number: '04',
-    title: 'Injecting Formulas & Number Formats',
+    title: '在空白表格寫入動態公式與數值格式',
     summary:
-      'Assign live Excel formulas via .Formula and control how currencies or percentages render via .NumberFormat.',
+      '除了寫入固定數字外，透過 .Formula 屬性可以直接把 Excel 公式寫入空白儲存格，並用 .NumberFormat 設定貨幣或百分比顯示格式。',
     concept:
-      'Setting .Formula = "=SUM(C2:C4)" keeps the spreadsheet reactive—if you edit C2 later, C6 recalculates automatically.',
-    code: `Range("C2:C6").NumberFormat = "$#,##0"
-Range("C6").Formula = "=SUM(C2:C4)"
-Range("A6").Value = "Total"`,
+      '使用 .Formula = "=SUM(C2:C4)" 寫入的是活公式——之後無論你手動修改 C2 到 C4 的哪一格，總計欄位都會立即跟著重新計算。',
+    code: `Sub BuildFormulaOnBlank()
+    Range("A1").Value = "Item"
+    Range("B1").Value = "Price"
+    Range("A2").Value = "Keyboard"
+    Range("B2").Value = 1200
+    Range("A3").Value = "Mouse"
+    Range("B3").Value = 650
+
+    Range("A5").Value = "Total"
+    Range("B5").Formula = "=SUM(B2:B3)"
+    Range("B2:B5").NumberFormat = "$#,##0"
+    Range("A5:B5").Font.Bold = True
+End Sub`,
     keyTakeaways: [
-      '.Value writes a static result; .Formula writes a live formula.',
-      'Use "$#,##0" for currency and "0.0%" for percentages.',
-      'WorksheetFunction.Sum(...) lets VBA compute totals in memory.',
+      '.Value 寫入的是靜態數值；.Formula 寫入的則是可即時重算的公式。',
+      '"$#,##0" 代表千分位貨幣格式，"0.0%" 代表一位小數百分比。',
+      '寫入資料後再套用 NumberFormat，可確保版面整齊一致。',
     ],
-    presetId: 'commission-tiers',
+    presetId: 'blank-sales-report',
   },
   {
     id: 'lesson-debug',
     number: '05',
-    title: 'Inspecting & Debugging with Debug.Print & MsgBox',
+    title: '使用 Debug.Print 與 MsgBox 進行除錯驗證',
     summary:
-      'Verify variable values and catch edge cases before running a macro on critical workbooks.',
+      '在撰寫複雜自動化巨集時，善用 Debug.Print 與 MsgBox 可以在不影響工作表版面的情況下，快速確認變數計算結果是否正確。',
     concept:
-      'Debug.Print logs messages into the Execution panel below the editor, while MsgBox displays a popup notification when a task finishes.',
-    code: `Dim total As Double
-total = WorksheetFunction.Sum(Range("C2:C4"))
-Debug.Print "Calculated total: " & total
-MsgBox "Done! Total is $" & total`,
+      'Debug.Print 會將訊息輸出至編輯器下方的 Execution 紀錄區；MsgBox 則會在執行結束時顯示提示訊息。',
+    code: `Sub DebugOnBlankSheet()
+    Dim total As Double
+    Range("A1").Value = 150
+    Range("A2").Value = 350
+
+    total = WorksheetFunction.Sum(Range("A1:A2"))
+    Debug.Print "計算加總結果：" & total
+    MsgBox "空白表格計算完成，總計為 " & total
+End Sub`,
     keyTakeaways: [
-      'Use & to concatenate text strings and numeric variables.',
-      'Syntax errors highlight the exact line number before execution.',
-      'Press Ctrl/Cmd + Enter anytime to test your macro immediately.',
+      '使用「&」運算子可將文字與數值變數串接成完整訊息。',
+      '若語法有誤，編輯器行號列與 Execution 面板會標示確切錯誤行數。',
+      '隨時可按 Ctrl / ⌘ + Enter 立即執行巨集並檢視結果。',
     ],
-    presetId: 'multi-sheet-rollup',
+    presetId: 'blank-sales-report',
   },
 ];
 

@@ -74,7 +74,7 @@ export interface ExamplePreset {
   id: string;
   title: string;
   category: string;
-  difficulty: 'Beginner' | 'Intermediate';
+  difficulty: '初階' | '中階';
   description: string;
   tipTitle: string;
   tipBody: string;

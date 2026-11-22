@@ -22,7 +22,7 @@ import { executeVbaMacro } from './vba/interpreter';
 import { lintVbaCode } from './vba/linter';
 
 const THEME_STORAGE_KEY = 'vba-playground-theme';
-const SESSION_STORAGE_KEY = 'vba-playground-session-v1';
+const SESSION_STORAGE_KEY = 'vba-playground-session-v2';
 const SPLIT_STORAGE_KEY = 'vba-playground-split-percent';
 const DEFAULT_SPLIT_PERCENT = 58;
 
@@ -76,22 +76,14 @@ function buildInitialState() {
 
   const initialSheets = cloneSheets(defaultPreset.sheets);
   const initialSelected = defaultPreset.selectedRange ?? {
-    start: { row: 6, col: 3 },
-    end: { row: 6, col: 3 },
+    start: { row: 1, col: 1 },
+    end: { row: 1, col: 1 },
   };
-
-  // Run the default example once on fresh visit so the live spreadsheet & execution state match
-  const initialRun = executeVbaMacro({
-    code: defaultPreset.code,
-    sheets: initialSheets,
-    activeSheetId: initialSheets[0].id,
-    selectedRange: initialSelected,
-  });
 
   return {
     activePresetId: defaultPreset.id,
-    sheets: initialRun.sheets,
-    activeSheetId: initialRun.activeSheetId,
+    sheets: initialSheets,
+    activeSheetId: initialSheets[0].id,
     selectedRange: initialSelected,
     modules: [
       {
@@ -101,8 +93,15 @@ function buildInitialState() {
       },
     ],
     activeModuleId: 'mod-1',
-    runCount: 1,
-    executionResult: initialRun.result,
+    runCount: 0,
+    executionResult: {
+      status: 'idle' as const,
+      headline: 'Ready',
+      detail: 'Click Run macro to populate and format the blank sheet.',
+      durationMs: 0,
+      logs: [],
+      changedCellsCount: 0,
+    },
   };
 }
 

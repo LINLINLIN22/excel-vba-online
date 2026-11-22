@@ -1,5 +1,5 @@
 import { ArrowUpRight, Check, Play } from 'lucide-react';
-import { EXAMPLE_PRESETS } from '../data/examples';
+import { createBlankSheet, EXAMPLE_PRESETS } from '../data/examples';
 import { LEARN_LESSONS } from '../data/lessons';
 import { ExamplePreset } from '../types/workbook';
 
@@ -13,18 +13,25 @@ export function LearnView({ onTryInPlayground }: LearnViewProps) {
       {/* Header */}
       <div className="space-y-1.5">
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#111C16] dark:text-[#E8F1EC] text-balance">
-          Learn Excel VBA step by step
+          循序漸進學 Excel VBA
         </h1>
         <p className="text-sm text-[#526359] dark:text-[#9CB3A6] max-w-2xl">
-          Core VBA concepts explained through real spreadsheet operations. Click any lesson&rsquo;s action button to experiment directly in the live editor.
+          從空白的 Excel 工作表出發，透過實際的表格操作掌握 VBA 核心語法。點擊任一單元的按鈕即可直接在即時編輯器中動手練習。
         </p>
       </div>
 
       {/* Lessons List */}
       <div className="space-y-4">
         {LEARN_LESSONS.map((lesson) => {
-          const targetPreset =
+          const basePreset =
             EXAMPLE_PRESETS.find((p) => p.id === lesson.presetId) ?? EXAMPLE_PRESETS[0];
+
+          // 確保點擊「在 Playground 試寫」時一律以空白工作表為對象執行教學片段
+          const blankTargetPreset: ExamplePreset = {
+            ...basePreset,
+            sheets: [createBlankSheet('Sheet1')],
+            selectedRange: { start: { row: 1, col: 1 }, end: { row: 1, col: 1 } },
+          };
 
           return (
             <section
@@ -35,7 +42,7 @@ export function LearnView({ onTryInPlayground }: LearnViewProps) {
                 {/* Left Explanation */}
                 <div className="lg:col-span-6 space-y-3">
                   <div className="text-xs font-medium text-[#157347] dark:text-[#57C587] tabular-nums">
-                    Lesson {lesson.number}
+                    單元 {lesson.number}
                   </div>
                   <h2 className="text-lg font-semibold text-[#111C16] dark:text-[#E8F1EC]">
                     {lesson.title}
@@ -69,10 +76,10 @@ export function LearnView({ onTryInPlayground }: LearnViewProps) {
                   <div className="flex flex-wrap items-center justify-end gap-2.5">
                     <button
                       type="button"
-                      onClick={() => onTryInPlayground(targetPreset)}
+                      onClick={() => onTryInPlayground(basePreset)}
                       className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-[#DCE5DF] dark:border-[#243B2E] bg-[#F6F9F7] dark:bg-[#182B20] hover:bg-[#EAF2ED] dark:hover:bg-[#20382A] text-xs font-medium text-[#111C16] dark:text-[#E8F1EC] transition-colors"
                     >
-                      <span>Open full example</span>
+                      <span>開啟完整範例</span>
                       <ArrowUpRight className="w-3.5 h-3.5" />
                     </button>
 
@@ -80,7 +87,7 @@ export function LearnView({ onTryInPlayground }: LearnViewProps) {
                       type="button"
                       onClick={() =>
                         onTryInPlayground(
-                          targetPreset,
+                          blankTargetPreset,
                           lesson.code.includes('Sub ')
                             ? lesson.code
                             : `Sub PracticeLesson()\n${lesson.code
@@ -92,7 +99,7 @@ export function LearnView({ onTryInPlayground }: LearnViewProps) {
                       className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-[#157347] hover:bg-[#12633B] text-white text-xs font-medium transition-colors"
                     >
                       <Play className="w-3 h-3 fill-current" />
-                      <span>Try snippet in Playground</span>
+                      <span>在空白表格試寫</span>
                     </button>
                   </div>
                 </div>
