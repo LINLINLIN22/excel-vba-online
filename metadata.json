@@ -1,0 +1,6 @@
+{
+  "name": "練練VBA — Excel VBA Playground",
+  "description": "A pure client-side Excel VBA editor and live spreadsheet simulator that runs directly in your browser with syntax highlighting, command hints, and light/dark themes.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
