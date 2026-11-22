@@ -3,7 +3,6 @@ import {
   CheckCircle2,
   Plus,
   Sparkles,
-  Terminal,
   X,
 } from 'lucide-react';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -29,7 +28,6 @@ interface VbaEditorPaneProps {
   onRunMacro: () => void;
   diagnostics: VbaDiagnostic[];
   executionResult: ExecutionResult;
-  runCount: number;
   onClearExecution: () => void;
 }
 
@@ -57,7 +55,6 @@ export function VbaEditorPane({
   onRunMacro,
   diagnostics,
   executionResult,
-  runCount,
   onClearExecution,
 }: VbaEditorPaneProps) {
   const activeModule = useMemo(
@@ -280,17 +277,17 @@ export function VbaEditorPane({
   return (
     <div className="h-full flex flex-col rounded-xl border border-[#DCE5DF] dark:border-[#233A2C] bg-white dark:bg-[#14241B] shadow-xs overflow-hidden">
       {/* Editor Card Header */}
-      <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-[#E7EEE9] dark:border-[#21362A]">
-        <div>
-          <h2 className="text-sm font-semibold text-[#111C16] dark:text-[#E8F1EC]">
+      <div className="flex items-center justify-between gap-3 px-4 py-2 border-b border-[#E7EEE9] dark:border-[#21362A]">
+        <div className="flex items-baseline gap-2.5 min-w-0">
+          <h2 className="text-xs font-semibold text-[#111C16] dark:text-[#E8F1EC] whitespace-nowrap">
             VBA editor
           </h2>
-          <p className="text-xs text-[#6B7E73] dark:text-[#89A193]">
+          <p className="text-[11px] text-[#6B7E73] dark:text-[#89A193] truncate">
             A little code, a visible result.
           </p>
         </div>
 
-        <span className="px-2.5 py-1 rounded-md border border-[#DCE5DF] dark:border-[#294234] bg-[#F7FAF8] dark:bg-[#192D22] text-[11px] font-medium text-[#526359] dark:text-[#9CB3A6]">
+        <span className="px-2 py-0.5 rounded border border-[#DCE5DF] dark:border-[#294234] bg-[#F7FAF8] dark:bg-[#192D22] text-[11px] font-medium text-[#526359] dark:text-[#9CB3A6] shrink-0">
           VBA
         </span>
       </div>
@@ -344,7 +341,7 @@ export function VbaEditorPane({
       </div>
 
       {/* Code Editor Surface (Always Dark Forest Slate for crisp syntax contrast) */}
-      <div className="relative flex flex-1 bg-[#102118] dark:bg-[#0B1710] text-[#E8F3ED] min-h-[300px] overflow-hidden">
+      <div className="relative flex flex-1 min-h-0 bg-[#102118] dark:bg-[#0B1710] text-[#E8F3ED] overflow-hidden">
         {/* Line Numbers Gutter */}
         <div
           ref={gutterRef}
@@ -517,8 +514,60 @@ export function VbaEditorPane({
         ))}
       </div>
 
+      {/* Compact Inline Error or Debug.Print / MsgBox Output (only shown when triggered) */}
+      {executionResult.status === 'error' && (
+        <div className="flex items-center justify-between gap-2 px-3 py-2 bg-[#2B1515] border-t border-[#5C2323] text-xs text-[#FCA5A5]">
+          <button
+            type="button"
+            onClick={() => {
+              if (executionResult.errorLine) jumpToLine(executionResult.errorLine);
+            }}
+            className="flex items-center gap-2 text-left min-w-0 flex-1 hover:underline"
+          >
+            <AlertCircle className="w-3.5 h-3.5 text-[#F87171] shrink-0" />
+            <span className="truncate">
+              <strong>{executionResult.headline}:</strong> {executionResult.detail}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={onClearExecution}
+            aria-label="Dismiss error"
+            className="p-0.5 rounded text-[#F8B4B4] hover:text-white shrink-0"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
+      {executionResult.status === 'success' && executionResult.logs.length > 0 && (
+        <div className="flex items-start justify-between gap-2 px-3 py-1.5 bg-[#0F1E16] border-t border-[#1E3528] max-h-20 overflow-y-auto vba-scroll">
+          <div className="space-y-0.5 min-w-0 flex-1">
+            {executionResult.logs.map((entry) => (
+              <div
+                key={entry.id}
+                className="flex items-center gap-2 text-[11px] font-mono text-[#CBE0D3]"
+              >
+                <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-[#1E3628] text-[#6EE7A0] shrink-0">
+                  {entry.type === 'msgbox' ? 'MsgBox' : 'Print'}
+                </span>
+                <span className="truncate">{entry.message}</span>
+              </div>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={onClearExecution}
+            aria-label="Clear output"
+            className="p-0.5 rounded text-[#7D9B8B] hover:text-white shrink-0"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* Editor Status Bar */}
-      <div className="flex items-center justify-between gap-3 px-4 py-1.5 bg-[#182B21] dark:bg-[#132219] border-t border-[#243B2E] text-[11px] text-[#8DA99A] tabular-nums">
+      <div className="flex items-center justify-between gap-3 px-4 py-1.5 bg-[#182B21] dark:bg-[#132219] border-t border-[#243B2E] text-[11px] text-[#8DA99A] tabular-nums shrink-0">
         <div className="flex items-center gap-3">
           <span>
             Ln {cursorLine}, Col {cursorCol}
@@ -537,102 +586,17 @@ export function VbaEditorPane({
           ) : (
             <span className="text-[#6EE7A0]">Syntax OK</span>
           )}
+          {executionResult.status === 'success' && (
+            <span className="inline-flex items-center gap-1 text-[#A7F3D0]">
+              <CheckCircle2 className="w-3 h-3" />
+              <span>Ran in {(executionResult.durationMs / 1000).toFixed(2)}s</span>
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-4">
           <span>Spaces: 4</span>
           <span>VBA</span>
-        </div>
-      </div>
-
-      {/* Execution Panel */}
-      <div className="p-4 bg-white dark:bg-[#14241B] border-t border-[#E7EEE9] dark:border-[#21362A] space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="text-xs font-semibold text-[#111C16] dark:text-[#E8F1EC]">
-            Execution
-          </h3>
-          <button
-            type="button"
-            onClick={onClearExecution}
-            className="text-xs text-[#6B7E73] dark:text-[#89A193] hover:text-[#111C16] dark:hover:text-[#E8F1EC] transition-colors"
-          >
-            Clear
-          </button>
-        </div>
-
-        {/* Status Card */}
-        {executionResult.status === 'success' && (
-          <div className="flex items-start gap-3 p-3 rounded-lg border border-[#D4E7DA] dark:border-[#244331] bg-[#F2F8F4] dark:bg-[#182E22]">
-            <div className="w-6 h-6 rounded-full bg-[#DFF0E5] dark:bg-[#234833] text-[#157347] dark:text-[#4ADE80] flex items-center justify-center shrink-0 mt-0.5">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold text-[#135334] dark:text-[#6EE7A0]">
-                {executionResult.headline}
-              </p>
-              <p className="text-xs text-[#3C6E54] dark:text-[#9AC2AB] mt-0.5">
-                {executionResult.detail}
-              </p>
-            </div>
-          </div>
-        )}
-
-        {executionResult.status === 'error' && (
-          <button
-            type="button"
-            onClick={() => {
-              if (executionResult.errorLine) jumpToLine(executionResult.errorLine);
-            }}
-            className="w-full text-left flex items-start gap-3 p-3 rounded-lg border border-[#FECACA] dark:border-[#5C2323] bg-[#FEF2F2] dark:bg-[#2A1515] hover:opacity-95 transition-opacity"
-          >
-            <div className="w-6 h-6 rounded-full bg-[#FEE2E2] dark:bg-[#4B1D1D] text-[#DC2626] dark:text-[#F87171] flex items-center justify-center shrink-0 mt-0.5">
-              <AlertCircle className="w-3.5 h-3.5" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold text-[#991B1B] dark:text-[#FCA5A5]">
-                {executionResult.headline}
-              </p>
-              <p className="text-xs text-[#B91C1C] dark:text-[#F8B4B4] mt-0.5">
-                {executionResult.detail}
-              </p>
-            </div>
-          </button>
-        )}
-
-        {executionResult.status === 'idle' && (
-          <div className="flex items-center gap-2.5 p-3 rounded-lg border border-[#E7EEE9] dark:border-[#21362A] bg-[#FAFDFB] dark:bg-[#111F17] text-xs text-[#5F7267] dark:text-[#8CA396]">
-            <Terminal className="w-4 h-4 shrink-0 opacity-70" />
-            <span>Ready. Click &ldquo;Run macro&rdquo; or press Ctrl/⌘ + Enter to execute.</span>
-          </div>
-        )}
-
-        {/* Debug.Print & MsgBox Console Logs */}
-        {executionResult.logs.length > 0 && executionResult.status === 'success' && (
-          <div className="rounded-lg border border-[#E2EAE5] dark:border-[#22392B] bg-[#F8FBF9] dark:bg-[#0F1D15] px-3 py-2 space-y-1 max-h-24 overflow-y-auto vba-scroll">
-            {executionResult.logs.map((entry) => (
-              <div
-                key={entry.id}
-                className="flex items-start gap-2 text-xs font-mono text-[#1D2D24] dark:text-[#CBE0D3]"
-              >
-                <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-[#E6F1EA] dark:bg-[#1E3628] text-[#157347] dark:text-[#6EE7A0] shrink-0">
-                  {entry.type === 'msgbox' ? 'MsgBox' : 'Print'}
-                </span>
-                <span className="break-all">{entry.message}</span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Execution Footer */}
-        <div className="flex items-center justify-between text-[11px] text-[#6B7E73] dark:text-[#849B8E] tabular-nums pt-0.5">
-          <span>
-            {executionResult.status === 'idle'
-              ? 'Not yet run'
-              : `Completed in ${(executionResult.durationMs / 1000).toFixed(2)}s`}
-          </span>
-          <span>
-            {runCount} {runCount === 1 ? 'macro' : 'macros'} executed
-          </span>
         </div>
       </div>
     </div>

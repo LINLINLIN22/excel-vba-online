@@ -1,4 +1,4 @@
-import { ArrowUpRight, Check, Play } from 'lucide-react';
+import { ArrowUpRight, Check, Code2 } from 'lucide-react';
 import { createBlankSheet, EXAMPLE_PRESETS } from '../data/examples';
 import { LEARN_LESSONS } from '../data/lessons';
 import { ExamplePreset } from '../types/workbook';
@@ -98,7 +98,7 @@ export function LearnView({ onTryInPlayground }: LearnViewProps) {
                       }
                       className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-[#157347] hover:bg-[#12633B] text-white text-xs font-medium transition-colors"
                     >
-                      <Play className="w-3 h-3 fill-current" />
+                      <Code2 className="w-3.5 h-3.5" />
                       <span>在空白表格試寫</span>
                     </button>
                   </div>

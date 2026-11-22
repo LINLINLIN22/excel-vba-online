@@ -119,7 +119,7 @@ End Sub`,
     summary:
       '在撰寫複雜自動化巨集時，善用 Debug.Print 與 MsgBox 可以在不影響工作表版面的情況下，快速確認變數計算結果是否正確。',
     concept:
-      'Debug.Print 會將訊息輸出至編輯器下方的 Execution 紀錄區；MsgBox 則會在執行結束時顯示提示訊息。',
+      'Debug.Print 會將訊息輸出至編輯器下方的訊息列；MsgBox 則會在執行結束時顯示提示訊息。',
     code: `Sub DebugOnBlankSheet()
     Dim total As Double
     Range("A1").Value = 150
@@ -131,8 +131,8 @@ End Sub`,
 End Sub`,
     keyTakeaways: [
       '使用「&」運算子可將文字與數值變數串接成完整訊息。',
-      '若語法有誤，編輯器行號列與 Execution 面板會標示確切錯誤行數。',
-      '隨時可按 Ctrl / ⌘ + Enter 立即執行巨集並檢視結果。',
+      '若語法有誤，編輯器行號列與下方錯誤提示列會標示確切錯誤行數。',
+      '載入後按「Run macro」或 Ctrl / ⌘ + Enter 即可導入資料並檢視結果。',
     ],
     presetId: 'blank-sales-report',
   },

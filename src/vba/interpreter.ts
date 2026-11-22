@@ -346,6 +346,10 @@ export function executeVbaMacro(input: RunMacroInput): RunMacroOutput {
           };
         }
         if (p === 'name') return sheet.name;
+        if (p === 'activate' || p === 'select') {
+          activeSheetId = sheet.id;
+          return null;
+        }
       }
 
       if (target.kind === 'range') {
@@ -472,6 +476,31 @@ export function executeVbaMacro(input: RunMacroInput): RunMacroOutput {
       }
     }
 
+    if (target === '__SHEETS_COLLECTION__') {
+      if (p === 'add') {
+        let idx = sheets.length + 1;
+        let newName = `Sheet${idx}`;
+        while (sheets.some((s) => s.name.toLowerCase() === newName.toLowerCase())) {
+          idx++;
+          newName = `Sheet${idx}`;
+        }
+        const newSheet: SheetData = {
+          id: `sheet-${Date.now()}-${sheets.length + 1}`,
+          name: newName,
+          rows: 15,
+          cols: 7,
+          cells: {},
+          colWidths: { 1: 102, 2: 76, 3: 84, 4: 74, 5: 74, 6: 74, 7: 74 },
+        };
+        sheets.push(newSheet);
+        activeSheetId = newSheet.id;
+        return { kind: 'sheet', sheetName: newSheet.name };
+      }
+      if (p === 'count') {
+        return sheets.length;
+      }
+    }
+
     throw new VbaRuntimeError(`Unsupported property or method ".${prop}".`, lineNum);
   };
 
@@ -499,6 +528,26 @@ export function executeVbaMacro(input: RunMacroInput): RunMacroOutput {
 
     let rangeTarget: RangeRef | null = null;
     let normalizedPath = propPath.map((s) => s.toLowerCase());
+
+    if (target.kind === 'sheet') {
+      const sheet = getSheetByNameOrIndex(target.sheetName, lineNum);
+      const sheetProp = propPath.map((s) => s.toLowerCase()).join('.');
+      if (sheetProp === 'name') {
+        const nextName = String(coercePrimitive(value) ?? '').trim();
+        if (!nextName) {
+          throw new VbaRuntimeError('Worksheet name cannot be empty.', lineNum);
+        }
+        const conflict = sheets.find(
+          (s) => s.id !== sheet.id && s.name.toLowerCase() === nextName.toLowerCase()
+        );
+        if (conflict) {
+          throw new VbaRuntimeError(`Worksheet "${nextName}" already exists.`, lineNum);
+        }
+        sheet.name = nextName;
+        return;
+      }
+      throw new VbaRuntimeError(`Cannot assign ".${propPath.join('.')}" on Worksheet.`, lineNum);
+    }
 
     if (target.kind === 'range') {
       rangeTarget = target;
@@ -1157,6 +1206,10 @@ export function executeVbaMacro(input: RunMacroInput): RunMacroOutput {
         const builtinRes = evalBuiltinCall(lower, args, this.lineNum);
         if (builtinRes !== undefined) return builtinRes;
         throw new VbaRuntimeError(`Sub or Function "${tok.value}" is not defined.`, this.lineNum);
+      }
+
+      if (lower === 'sheets' || lower === 'worksheets') {
+        return '__SHEETS_COLLECTION__';
       }
 
       if (lower === 'rows' || lower === 'columns') {

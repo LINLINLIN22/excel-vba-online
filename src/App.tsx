@@ -6,7 +6,7 @@ import { QuickGuideModal } from './components/QuickGuideModal';
 import { SpreadsheetPane } from './components/SpreadsheetPane';
 import { ActiveTab, TopBar } from './components/TopBar';
 import { VbaEditorPane } from './components/VbaEditorPane';
-import { EXAMPLE_PRESETS } from './data/examples';
+import { createBlankSheet, EXAMPLE_PRESETS } from './data/examples';
 import { coordToAddress, iterateRangeCoords } from './spreadsheet/addressing';
 import { recalculateSheets } from './spreadsheet/formulaEngine';
 import {
@@ -22,18 +22,14 @@ import { executeVbaMacro } from './vba/interpreter';
 import { lintVbaCode } from './vba/linter';
 
 const THEME_STORAGE_KEY = 'vba-playground-theme';
-const SESSION_STORAGE_KEY = 'vba-playground-session-v2';
+const SESSION_STORAGE_KEY = 'vba-playground-session-v3';
 const SPLIT_STORAGE_KEY = 'vba-playground-split-percent';
 const DEFAULT_SPLIT_PERCENT = 58;
 
 interface SavedSession {
   activePresetId: string;
-  sheets: SheetData[];
-  activeSheetId: string;
-  selectedRange: CellRange;
   modules: VbaModule[];
   activeModuleId: string;
-  runCount: number;
 }
 
 function cloneSheets(sheets: SheetData[]): SheetData[] {
@@ -51,14 +47,24 @@ function cloneSheets(sheets: SheetData[]): SheetData[] {
 
 function buildInitialState() {
   const defaultPreset = EXAMPLE_PRESETS[0];
+  const blankSheets = [createBlankSheet('Sheet1')];
+  const blankSelected: CellRange = {
+    start: { row: 1, col: 1 },
+    end: { row: 1, col: 1 },
+  };
 
   try {
     const raw = localStorage.getItem(SESSION_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as SavedSession;
-      if (parsed.sheets?.length > 0 && parsed.modules?.length > 0) {
+      if (parsed.modules?.length > 0) {
         return {
-          ...parsed,
+          activePresetId: parsed.activePresetId || defaultPreset.id,
+          sheets: blankSheets,
+          activeSheetId: blankSheets[0].id,
+          selectedRange: blankSelected,
+          modules: parsed.modules,
+          activeModuleId: parsed.activeModuleId || parsed.modules[0].id,
           executionResult: {
             status: 'idle' as const,
             headline: 'Session restored',
@@ -93,7 +99,6 @@ function buildInitialState() {
       },
     ],
     activeModuleId: 'mod-1',
-    runCount: 0,
     executionResult: {
       status: 'idle' as const,
       headline: 'Ready',
@@ -184,28 +189,23 @@ export default function App() {
   const [selectedRange, setSelectedRange] = useState<CellRange>(initial.selectedRange);
   const [modules, setModules] = useState<VbaModule[]>(initial.modules);
   const [activeModuleId, setActiveModuleId] = useState<string>(initial.activeModuleId);
-  const [runCount, setRunCount] = useState<number>(initial.runCount);
   const [executionResult, setExecutionResult] = useState<ExecutionResult>(
     initial.executionResult
   );
 
-  // Persist session locally in browser
+  // Persist active preset and VBA modules locally in browser (spreadsheet always loads blank)
   useEffect(() => {
     try {
       const payload: SavedSession = {
         activePresetId,
-        sheets,
-        activeSheetId,
-        selectedRange,
         modules,
         activeModuleId,
-        runCount,
       };
       localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(payload));
     } catch {
       // Ignore quota errors
     }
-  }, [activePresetId, sheets, activeSheetId, selectedRange, modules, activeModuleId, runCount]);
+  }, [activePresetId, modules, activeModuleId]);
 
   const activePreset = useMemo(
     () => EXAMPLE_PRESETS.find((p) => p.id === activePresetId) ?? EXAMPLE_PRESETS[0],
@@ -238,9 +238,6 @@ export default function App() {
       setActiveSheetId(output.activeSheetId);
       setSelectedRange(output.selectedRange);
       setExecutionResult(output.result);
-      if (output.result.status === 'success') {
-        setRunCount((c) => c + 1);
-      }
     },
     [activeModule.code, sheets, activeSheetId, selectedRange]
   );
@@ -262,10 +259,10 @@ export default function App() {
 
   const handleLoadPreset = (
     preset: ExamplePreset,
-    autoRun = true,
+    autoRun = false,
     customCode?: string
   ) => {
-    const freshSheets = cloneSheets(preset.sheets);
+    const freshSheets = [createBlankSheet('Sheet1')];
     const freshRange = preset.selectedRange ?? {
       start: { row: 1, col: 1 },
       end: { row: 1, col: 1 },
@@ -295,9 +292,6 @@ export default function App() {
       setActiveSheetId(output.activeSheetId);
       setSelectedRange(output.selectedRange);
       setExecutionResult(output.result);
-      if (output.result.status === 'success') {
-        setRunCount((c) => c + 1);
-      }
     } else {
       setSheets(freshSheets);
       setActiveSheetId(freshSheets[0].id);
@@ -473,71 +467,59 @@ export default function App() {
         onOpenQuickGuide={() => setQuickGuideOpen(true)}
       />
 
-      <main className="flex-1 w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
+      <main className="flex-1 w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-3 space-y-3">
         {activeTab === 'playground' && (
           <>
-            {/* Hero & Primary Action Row */}
-            <section className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-              <div className="space-y-1.5 max-w-2xl">
-                <h1 className="text-2xl sm:text-[30px] font-bold tracking-tight text-[#111C16] dark:text-[#E8F1EC] leading-tight text-balance">
-                  A little VBA. A lot of possibility.
-                </h1>
-                <p className="text-sm text-[#526359] dark:text-[#9CB3A6]">
-                  Write a macro, run it, and watch your spreadsheet come to life. No Excel required.
-                </p>
+            {/* Compact Workspace Action Bar */}
+            <section className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <label
+                  htmlFor="example-select"
+                  className="text-[11px] font-semibold uppercase tracking-wider text-[#6B7E73] dark:text-[#849B8E] whitespace-nowrap"
+                >
+                  Try an example
+                </label>
+                <select
+                  id="example-select"
+                  value={activePresetId}
+                  onChange={(e) => {
+                    const chosen = EXAMPLE_PRESETS.find((p) => p.id === e.target.value);
+                    if (chosen) handleLoadPreset(chosen, false);
+                  }}
+                  className="h-9 min-w-[220px] px-3 rounded-lg border border-[#D4DFD8] dark:border-[#243B2E] bg-white dark:bg-[#14241B] text-xs font-medium text-[#111C16] dark:text-[#E8F1EC] focus:outline-none focus:ring-2 focus:ring-[#157347] cursor-pointer"
+                >
+                  {EXAMPLE_PRESETS.map((preset) => (
+                    <option key={preset.id} value={preset.id}>
+                      {preset.title}
+                    </option>
+                  ))}
+                </select>
               </div>
 
-              {/* Example Selector & Run Macro CTA */}
-              <div className="flex flex-wrap sm:flex-nowrap items-start gap-3 shrink-0">
-                <div className="flex flex-col gap-1">
-                  <label
-                    htmlFor="example-select"
-                    className="text-[10px] font-semibold uppercase tracking-wider text-[#6B7E73] dark:text-[#849B8E]"
-                  >
-                    Try an example
-                  </label>
-                  <select
-                    id="example-select"
-                    value={activePresetId}
-                    onChange={(e) => {
-                      const chosen = EXAMPLE_PRESETS.find((p) => p.id === e.target.value);
-                      if (chosen) handleLoadPreset(chosen, true);
-                    }}
-                    className="h-10 min-w-[200px] px-3.5 rounded-lg border border-[#D4DFD8] dark:border-[#243B2E] bg-white dark:bg-[#14241B] text-xs font-medium text-[#111C16] dark:text-[#E8F1EC] focus:outline-none focus:ring-2 focus:ring-[#157347] cursor-pointer"
-                  >
-                    {EXAMPLE_PRESETS.map((preset) => (
-                      <option key={preset.id} value={preset.id}>
-                        {preset.title}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="flex flex-col items-center gap-1 pt-[18px]">
-                  <button
-                    type="button"
-                    onClick={() => handleRunMacro()}
-                    className="h-10 px-5 rounded-lg bg-[#187E4B] hover:bg-[#146B40] active:scale-[0.99] text-white text-xs font-semibold inline-flex items-center gap-2 shadow-xs transition-all whitespace-nowrap cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#187E4B]"
-                  >
-                    <Play className="w-3.5 h-3.5 fill-current" />
-                    <span>Run macro</span>
-                  </button>
-                  <span className="text-[10px] text-[#73847A] dark:text-[#789082] whitespace-nowrap">
-                    ⌘ Enter to run
-                  </span>
-                </div>
+              <div className="flex items-center gap-2.5 shrink-0">
+                <span className="hidden sm:inline text-[11px] text-[#73847A] dark:text-[#789082] whitespace-nowrap">
+                  ⌘ Enter to run
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleRunMacro()}
+                  className="h-9 px-4 rounded-lg bg-[#187E4B] hover:bg-[#146B40] active:scale-[0.99] text-white text-xs font-semibold inline-flex items-center gap-2 shadow-xs transition-all whitespace-nowrap cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#187E4B]"
+                >
+                  <Play className="w-3.5 h-3.5 fill-current" />
+                  <span>Run macro</span>
+                </button>
               </div>
             </section>
 
-            {/* Dual-Pane Resizable Workspace: Left Spreadsheet, Right VBA Editor on laptop+ screens */}
+            {/* Dual-Pane Resizable Workspace: Fits laptop viewport without outer page scrolling */}
             <section
               ref={splitContainerRef}
               style={{ '--split-left': `${splitPercent}%` } as React.CSSProperties}
-              className={`flex flex-col min-[900px]:flex-row items-stretch gap-5 min-[900px]:gap-0 ${
+              className={`flex flex-col min-[900px]:flex-row items-stretch gap-4 min-[900px]:gap-0 min-[900px]:h-[clamp(480px,calc(100dvh-202px),740px)] ${
                 isResizing ? 'select-none' : ''
               }`}
             >
-              <div className="w-full min-[900px]:w-[calc(var(--split-left)-10px)] min-[900px]:shrink-0 min-w-0">
+              <div className="w-full min-[900px]:w-[calc(var(--split-left)-10px)] min-[900px]:h-full min-[900px]:shrink-0 min-w-0">
                 <SpreadsheetPane
                   sheets={sheets}
                   activeSheetId={activeSheetId}
@@ -592,7 +574,7 @@ export default function App() {
                 />
               </div>
 
-              <div className="w-full min-[900px]:flex-1 min-w-0">
+              <div className="w-full min-[900px]:flex-1 min-[900px]:h-full min-w-0">
                 <VbaEditorPane
                   modules={modules}
                   activeModuleId={activeModuleId}
@@ -603,7 +585,6 @@ export default function App() {
                   onRunMacro={() => handleRunMacro()}
                   diagnostics={diagnostics}
                   executionResult={executionResult}
-                  runCount={runCount}
                   onClearExecution={() =>
                     setExecutionResult({
                       status: 'idle',
@@ -619,18 +600,18 @@ export default function App() {
             </section>
 
             {/* Contextual Callout Strip ("See the connection") */}
-            <section className="rounded-xl border border-[#D8E7DD] dark:border-[#21382B] bg-[#EDF5F0] dark:bg-[#14251C] px-4 sm:px-5 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <section className="rounded-xl border border-[#D8E7DD] dark:border-[#21382B] bg-[#EDF5F0] dark:bg-[#14251C] px-4 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
               <div className="flex items-start sm:items-center gap-3">
-                <div className="w-7 h-7 rounded-md bg-[#DCECE2] dark:bg-[#1E3829] text-[#157347] dark:text-[#57C587] flex items-center justify-center shrink-0">
-                  <Info className="w-4 h-4" />
+                <div className="w-6 h-6 rounded-md bg-[#DCECE2] dark:bg-[#1E3829] text-[#157347] dark:text-[#57C587] flex items-center justify-center shrink-0">
+                  <Info className="w-3.5 h-3.5" />
                 </div>
-                <div className="text-xs leading-relaxed">
-                  <p className="font-semibold text-[#111C16] dark:text-[#E8F1EC]">
-                    {activePreset.tipTitle}
-                  </p>
-                  <p className="text-[#4B6155] dark:text-[#9CB3A6]">
+                <div className="text-xs leading-snug">
+                  <span className="font-semibold text-[#111C16] dark:text-[#E8F1EC] mr-2">
+                    {activePreset.tipTitle}:
+                  </span>
+                  <span className="text-[#4B6155] dark:text-[#9CB3A6]">
                     {activePreset.tipBody}
-                  </p>
+                  </span>
                 </div>
               </div>
 
@@ -649,14 +630,14 @@ export default function App() {
         {activeTab === 'examples' && (
           <ExamplesView
             activePresetId={activePresetId}
-            onLoadPreset={(preset, autoRun) => handleLoadPreset(preset, autoRun)}
+            onLoadPreset={(preset) => handleLoadPreset(preset, false)}
           />
         )}
 
         {activeTab === 'learn' && (
           <LearnView
             onTryInPlayground={(preset, customCode) =>
-              handleLoadPreset(preset, true, customCode)
+              handleLoadPreset(preset, false, customCode)
             }
           />
         )}
@@ -664,7 +645,7 @@ export default function App() {
 
       {/* Footer */}
       <footer className="w-full border-t border-[#E2EAE5] dark:border-[#1E3327] mt-auto">
-        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-[#6B7E73] dark:text-[#7E9689]">
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-[#6B7E73] dark:text-[#7E9689]">
           <span>A safe place to experiment. Changes stay in this session.</span>
           <span>VBA simulator · Common Excel commands supported</span>
         </div>

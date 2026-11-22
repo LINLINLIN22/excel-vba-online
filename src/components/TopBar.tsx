@@ -25,7 +25,7 @@ export function TopBar({
 
   return (
     <header className="w-full border-b border-[#DCE5DF] dark:border-[#1E3327] bg-white/95 dark:bg-[#0F1E16]/95 backdrop-blur-sm transition-colors">
-      <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4 sm:gap-8">
+      <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 h-[52px] flex items-center justify-between gap-4 sm:gap-8">
         {/* Brand */}
         <div className="flex items-center gap-2.5 whitespace-nowrap shrink-0">
           <button

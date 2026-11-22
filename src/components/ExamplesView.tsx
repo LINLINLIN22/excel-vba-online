@@ -1,4 +1,4 @@
-import { ArrowRight, Code2, Play } from 'lucide-react';
+import { ArrowRight, Code2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { EXAMPLE_PRESETS } from '../data/examples';
 import { ExamplePreset } from '../types/workbook';
@@ -36,7 +36,7 @@ export function ExamplesView({
             即開即用的 VBA 範例庫
           </h1>
           <p className="text-sm text-[#526359] dark:text-[#9CB3A6] max-w-2xl">
-            挑選常見的 Excel 自動化應用情境，一鍵將對應的工作表與巨集程式碼載入 Playground 測試執行。
+            挑選常見的 Excel 自動化應用情境，將巨集程式碼載入 Playground 的空白工作表後，按下「Run macro」即可導入資料並執行。
           </p>
         </div>
 
@@ -114,23 +114,14 @@ export function ExamplesView({
                 </pre>
               </div>
 
-              <div className="flex items-center justify-between gap-2 pt-4 mt-4 border-t border-[#EBF1ED] dark:border-[#1E3327]">
+              <div className="flex items-center justify-end gap-2 pt-4 mt-4 border-t border-[#EBF1ED] dark:border-[#1E3327]">
                 <button
                   type="button"
                   onClick={() => onLoadPreset(preset, false)}
-                  className="inline-flex items-center gap-1.5 text-xs font-medium text-[#526359] dark:text-[#9CB3A6] hover:text-[#111C16] dark:hover:text-[#E8F1EC] transition-colors"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#157347] hover:bg-[#12633B] text-white text-xs font-medium transition-colors whitespace-nowrap cursor-pointer"
                 >
                   <Code2 className="w-3.5 h-3.5" />
-                  <span>開啟程式碼</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => onLoadPreset(preset, true)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#157347] hover:bg-[#12633B] text-white text-xs font-medium transition-colors whitespace-nowrap"
-                >
-                  <Play className="w-3 h-3 fill-current" />
-                  <span>載入並執行</span>
+                  <span>載入到 Playground</span>
                   <ArrowRight className="w-3 h-3" />
                 </button>
               </div>

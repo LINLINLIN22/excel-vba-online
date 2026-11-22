@@ -205,23 +205,23 @@ export function SpreadsheetPane({
   return (
     <div className="h-full flex flex-col rounded-xl border border-[#DCE5DF] dark:border-[#233A2C] bg-white dark:bg-[#14241B] shadow-xs overflow-hidden">
       {/* Window Title Bar */}
-      <div className="flex items-center justify-between gap-3 px-4 py-2.5 border-b border-[#E7EEE9] dark:border-[#21362A]">
+      <div className="flex items-center justify-between gap-3 px-4 py-1.5 border-b border-[#E7EEE9] dark:border-[#21362A]">
         <div className="flex items-center gap-2.5 min-w-0">
           <div
             aria-hidden="true"
-            className="w-6 h-6 rounded-md bg-[#1D6F42] text-white font-bold text-xs flex items-center justify-center shrink-0"
+            className="w-5 h-5 rounded bg-[#1D6F42] text-white font-bold text-[11px] flex items-center justify-center shrink-0"
           >
             X
           </div>
-          <span className="text-sm font-semibold text-[#111C16] dark:text-[#E8F1EC] whitespace-nowrap">
+          <span className="text-xs font-semibold text-[#111C16] dark:text-[#E8F1EC] whitespace-nowrap">
             Workbook1
           </span>
-          <span className="text-xs text-[#73847A] dark:text-[#7E9689] truncate">
+          <span className="text-[11px] text-[#73847A] dark:text-[#7E9689] truncate">
             Saved for this session
           </span>
         </div>
 
-        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#EDF5F0] dark:bg-[#1B3325] text-[#157347] dark:text-[#65CE91] text-xs font-medium whitespace-nowrap shrink-0">
+        <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#EDF5F0] dark:bg-[#1B3325] text-[#157347] dark:text-[#65CE91] text-[11px] font-medium whitespace-nowrap shrink-0">
           <span className="w-1.5 h-1.5 rounded-full bg-[#18804C] dark:bg-[#4ADE80]" />
           <span>Live preview</span>
         </div>
@@ -236,7 +236,7 @@ export function SpreadsheetPane({
               key={tab}
               type="button"
               onClick={() => setRibbonTab(tab)}
-              className={`relative py-2 text-xs font-medium whitespace-nowrap shrink-0 transition-colors focus-visible:outline-none ${
+              className={`relative py-1.5 text-xs font-medium whitespace-nowrap shrink-0 transition-colors focus-visible:outline-none ${
                 isActive
                   ? 'text-[#157347] dark:text-[#57C587]'
                   : 'text-[#526359] dark:text-[#9CB3A6] hover:text-[#111C16] dark:hover:text-[#E8F1EC]'
@@ -252,7 +252,7 @@ export function SpreadsheetPane({
       </div>
 
       {/* Ribbon Toolbar */}
-      <div className="px-3.5 py-2 border-b border-[#E7EEE9] dark:border-[#21362A] bg-[#FAFDFB] dark:bg-[#17291F] min-h-[54px] flex items-center overflow-x-auto vba-scroll">
+      <div className="px-3.5 py-1.5 border-b border-[#E7EEE9] dark:border-[#21362A] bg-[#FAFDFB] dark:bg-[#17291F] min-h-[46px] flex items-center overflow-x-auto vba-scroll">
         {ribbonTab === 'Home' && (
           <div className="flex items-center gap-2.5 text-xs text-[#1D2D24] dark:text-[#D5E3DB]">
             {/* Clipboard */}
@@ -643,7 +643,7 @@ export function SpreadsheetPane({
       </form>
 
       {/* Spreadsheet Grid */}
-      <div className="flex-1 overflow-auto vba-scroll bg-white dark:bg-[#122018] min-h-[380px] max-h-[470px] select-none">
+      <div className="flex-1 min-h-0 overflow-auto vba-scroll bg-white dark:bg-[#122018] select-none">
         <table
           className="border-collapse table-fixed w-full"
           style={{
@@ -652,7 +652,7 @@ export function SpreadsheetPane({
         >
           <thead>
             <tr>
-              <th className="w-10 min-w-[40px] h-7 bg-[#F5F8F6] dark:bg-[#192B20] border-b border-r border-[#E2EAE5] dark:border-[#243A2D] sticky top-0 left-0 z-20" />
+              <th className="w-10 min-w-[40px] h-6 bg-[#F5F8F6] dark:bg-[#192B20] border-b border-r border-[#E2EAE5] dark:border-[#243A2D] sticky top-0 left-0 z-20" />
               {colLetters.map((letter, idx) => {
                 const colNum = idx + 1;
                 const isColSelected =
@@ -668,7 +668,7 @@ export function SpreadsheetPane({
                         end: { row: displayRows, col: colNum },
                       })
                     }
-                    className={`h-7 text-[11px] font-medium border-b border-r border-[#E2EAE5] dark:border-[#243A2D] sticky top-0 z-10 cursor-pointer transition-colors ${
+                    className={`h-6 text-[11px] font-medium border-b border-r border-[#E2EAE5] dark:border-[#243A2D] sticky top-0 z-10 cursor-pointer transition-colors ${
                       isColSelected
                         ? 'bg-[#E5F2EA] dark:bg-[#223B2C] text-[#157347] dark:text-[#6EE7A0]'
                         : 'bg-[#F5F8F6] dark:bg-[#192B20] text-[#5F7267] dark:text-[#8CA396]'
@@ -687,7 +687,7 @@ export function SpreadsheetPane({
                 rowNum >= selectedRange.start.row && rowNum <= selectedRange.end.row;
 
               return (
-                <tr key={rowNum} className="h-[30px]">
+                <tr key={rowNum} className="h-[26px]">
                   {/* Row Number Header */}
                   <td
                     onClick={() =>
