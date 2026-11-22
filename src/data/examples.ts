@@ -4,7 +4,7 @@ function baseSheet(
   name: string,
   cells: SheetData['cells'],
   rows = 15,
-  cols = 8
+  cols = 7
 ): SheetData {
   return {
     id: `sheet-${name.toLowerCase().replace(/\s+/g, '-')}`,
@@ -13,14 +13,13 @@ function baseSheet(
     cols,
     cells,
     colWidths: {
-      1: 118,
-      2: 96,
-      3: 108,
-      4: 96,
-      5: 96,
-      6: 96,
-      7: 96,
-      8: 96,
+      1: 102,
+      2: 76,
+      3: 84,
+      4: 74,
+      5: 74,
+      6: 74,
+      7: 74,
     },
   };
 }

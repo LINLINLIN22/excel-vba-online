@@ -203,7 +203,7 @@ export function SpreadsheetPane({
   );
 
   return (
-    <div className="flex flex-col rounded-xl border border-[#DCE5DF] dark:border-[#233A2C] bg-white dark:bg-[#14241B] shadow-xs overflow-hidden">
+    <div className="h-full flex flex-col rounded-xl border border-[#DCE5DF] dark:border-[#233A2C] bg-white dark:bg-[#14241B] shadow-xs overflow-hidden">
       {/* Window Title Bar */}
       <div className="flex items-center justify-between gap-3 px-4 py-2.5 border-b border-[#E7EEE9] dark:border-[#21362A]">
         <div className="flex items-center gap-2.5 min-w-0">
@@ -252,11 +252,11 @@ export function SpreadsheetPane({
       </div>
 
       {/* Ribbon Toolbar */}
-      <div className="px-4 py-2 border-b border-[#E7EEE9] dark:border-[#21362A] bg-[#FAFDFB] dark:bg-[#17291F] min-h-[54px] flex items-center overflow-x-auto vba-scroll">
+      <div className="px-3.5 py-2 border-b border-[#E7EEE9] dark:border-[#21362A] bg-[#FAFDFB] dark:bg-[#17291F] min-h-[54px] flex items-center overflow-x-auto vba-scroll">
         {ribbonTab === 'Home' && (
-          <div className="flex items-center gap-3 text-xs text-[#1D2D24] dark:text-[#D5E3DB]">
+          <div className="flex items-center gap-2.5 text-xs text-[#1D2D24] dark:text-[#D5E3DB]">
             {/* Clipboard */}
-            <div className="flex flex-col items-start pr-3 border-r border-[#E2EAE5] dark:border-[#243B2E] shrink-0">
+            <div className="flex flex-col items-start pr-2.5 border-r border-[#E2EAE5] dark:border-[#243B2E] shrink-0">
               <button
                 type="button"
                 onClick={handlePaste}
@@ -271,7 +271,7 @@ export function SpreadsheetPane({
             </div>
 
             {/* Font */}
-            <div className="flex flex-col items-start pr-3 border-r border-[#E2EAE5] dark:border-[#243B2E] shrink-0">
+            <div className="flex flex-col items-start pr-2.5 border-r border-[#E2EAE5] dark:border-[#243B2E] shrink-0">
               <div className="flex items-center gap-1.5 relative">
                 <select
                   aria-label="Font family"
@@ -384,7 +384,7 @@ export function SpreadsheetPane({
             </div>
 
             {/* Alignment */}
-            <div className="flex flex-col items-start pr-3 border-r border-[#E2EAE5] dark:border-[#243B2E] shrink-0">
+            <div className="flex flex-col items-start pr-2.5 border-r border-[#E2EAE5] dark:border-[#243B2E] shrink-0">
               <div className="flex items-center gap-1">
                 {(
                   [
@@ -643,7 +643,7 @@ export function SpreadsheetPane({
       </form>
 
       {/* Spreadsheet Grid */}
-      <div className="flex-1 overflow-auto vba-scroll bg-white dark:bg-[#122018] max-h-[430px] select-none">
+      <div className="flex-1 overflow-auto vba-scroll bg-white dark:bg-[#122018] min-h-[380px] max-h-[470px] select-none">
         <table
           className="border-collapse table-fixed w-full"
           style={{

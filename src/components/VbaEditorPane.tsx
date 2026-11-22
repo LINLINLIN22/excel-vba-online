@@ -278,7 +278,7 @@ export function VbaEditorPane({
   const acTopPx = Math.min(220, Math.max(28, cursorLine * 22 + 8));
 
   return (
-    <div className="flex flex-col rounded-xl border border-[#DCE5DF] dark:border-[#233A2C] bg-white dark:bg-[#14241B] shadow-xs overflow-hidden">
+    <div className="h-full flex flex-col rounded-xl border border-[#DCE5DF] dark:border-[#233A2C] bg-white dark:bg-[#14241B] shadow-xs overflow-hidden">
       {/* Editor Card Header */}
       <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-[#E7EEE9] dark:border-[#21362A]">
         <div>
@@ -344,7 +344,7 @@ export function VbaEditorPane({
       </div>
 
       {/* Code Editor Surface (Always Dark Forest Slate for crisp syntax contrast) */}
-      <div className="relative flex bg-[#102118] dark:bg-[#0B1710] text-[#E8F3ED] h-[300px] overflow-hidden">
+      <div className="relative flex flex-1 bg-[#102118] dark:bg-[#0B1710] text-[#E8F3ED] min-h-[300px] overflow-hidden">
         {/* Line Numbers Gutter */}
         <div
           ref={gutterRef}

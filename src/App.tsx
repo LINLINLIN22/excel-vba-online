@@ -1,5 +1,5 @@
 import { ArrowUpRight, Info, Play } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ExamplesView } from './components/ExamplesView';
 import { LearnView } from './components/LearnView';
 import { QuickGuideModal } from './components/QuickGuideModal';
@@ -23,6 +23,8 @@ import { lintVbaCode } from './vba/linter';
 
 const THEME_STORAGE_KEY = 'vba-playground-theme';
 const SESSION_STORAGE_KEY = 'vba-playground-session-v1';
+const SPLIT_STORAGE_KEY = 'vba-playground-split-percent';
+const DEFAULT_SPLIT_PERCENT = 58;
 
 interface SavedSession {
   activePresetId: string;
@@ -128,6 +130,54 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('playground');
   const [quickGuideOpen, setQuickGuideOpen] = useState(false);
+
+  const [splitPercent, setSplitPercent] = useState<number>(() => {
+    try {
+      const saved = Number(localStorage.getItem(SPLIT_STORAGE_KEY));
+      if (Number.isFinite(saved) && saved >= 32 && saved <= 72) return saved;
+    } catch {
+      // Ignore
+    }
+    return DEFAULT_SPLIT_PERCENT;
+  });
+  const [isResizing, setIsResizing] = useState(false);
+  const splitContainerRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(SPLIT_STORAGE_KEY, String(splitPercent));
+    } catch {
+      // Ignore
+    }
+  }, [splitPercent]);
+
+  useEffect(() => {
+    if (!isResizing) return;
+
+    const handlePointerMove = (e: PointerEvent) => {
+      const container = splitContainerRef.current;
+      if (!container) return;
+      const rect = container.getBoundingClientRect();
+      if (rect.width <= 0) return;
+      const rawPct = ((e.clientX - rect.left) / rect.width) * 100;
+      const clamped = Math.max(32, Math.min(72, Math.round(rawPct * 10) / 10));
+      setSplitPercent(clamped);
+    };
+
+    const handlePointerUp = () => {
+      setIsResizing(false);
+    };
+
+    document.body.style.cursor = 'col-resize';
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp);
+
+    return () => {
+      document.body.style.cursor = '';
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+    };
+  }, [isResizing]);
 
   const [activePresetId, setActivePresetId] = useState<string>(initial.activePresetId);
   const [sheets, setSheets] = useState<SheetData[]>(initial.sheets);
@@ -321,9 +371,9 @@ export default function App() {
       id: newId,
       name: `Sheet${nextNum}`,
       rows: 15,
-      cols: 8,
+      cols: 7,
       cells: {},
-      colWidths: { 1: 118, 2: 96, 3: 108, 4: 96, 5: 96, 6: 96, 7: 96, 8: 96 },
+      colWidths: { 1: 102, 2: 76, 3: 84, 4: 74, 5: 74, 6: 74, 7: 74 },
     };
     setSheets((prev) => [...prev, newSheet]);
     setActiveSheetId(newId);
@@ -428,7 +478,7 @@ export default function App() {
         {activeTab === 'playground' && (
           <>
             {/* Hero & Primary Action Row */}
-            <section className="flex flex-col lg:flex-row lg:items-end justify-between gap-5">
+            <section className="flex flex-col md:flex-row md:items-end justify-between gap-4">
               <div className="space-y-1.5 max-w-2xl">
                 <h1 className="text-2xl sm:text-[30px] font-bold tracking-tight text-[#111C16] dark:text-[#E8F1EC] leading-tight text-balance">
                   A little VBA. A lot of possibility.
@@ -454,7 +504,7 @@ export default function App() {
                       const chosen = EXAMPLE_PRESETS.find((p) => p.id === e.target.value);
                       if (chosen) handleLoadPreset(chosen, true);
                     }}
-                    className="h-10 min-w-[210px] px-3.5 rounded-lg border border-[#D4DFD8] dark:border-[#243B2E] bg-white dark:bg-[#14241B] text-xs font-medium text-[#111C16] dark:text-[#E8F1EC] focus:outline-none focus:ring-2 focus:ring-[#157347] cursor-pointer"
+                    className="h-10 min-w-[200px] px-3.5 rounded-lg border border-[#D4DFD8] dark:border-[#243B2E] bg-white dark:bg-[#14241B] text-xs font-medium text-[#111C16] dark:text-[#E8F1EC] focus:outline-none focus:ring-2 focus:ring-[#157347] cursor-pointer"
                   >
                     {EXAMPLE_PRESETS.map((preset) => (
                       <option key={preset.id} value={preset.id}>
@@ -480,9 +530,15 @@ export default function App() {
               </div>
             </section>
 
-            {/* Dual-Pane Workspace */}
-            <section className="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
-              <div className="xl:col-span-7">
+            {/* Dual-Pane Resizable Workspace: Left Spreadsheet, Right VBA Editor on laptop+ screens */}
+            <section
+              ref={splitContainerRef}
+              style={{ '--split-left': `${splitPercent}%` } as React.CSSProperties}
+              className={`flex flex-col min-[900px]:flex-row items-stretch gap-5 min-[900px]:gap-0 ${
+                isResizing ? 'select-none' : ''
+              }`}
+            >
+              <div className="w-full min-[900px]:w-[calc(var(--split-left)-10px)] min-[900px]:shrink-0 min-w-0">
                 <SpreadsheetPane
                   sheets={sheets}
                   activeSheetId={activeSheetId}
@@ -499,7 +555,45 @@ export default function App() {
                 />
               </div>
 
-              <div className="xl:col-span-5">
+              {/* Interactive Resizer Handle (visible on side-by-side laptop/desktop viewports) */}
+              <div
+                role="separator"
+                tabIndex={0}
+                aria-orientation="vertical"
+                aria-label="Resize spreadsheet and VBA editor panels"
+                aria-valuemin={32}
+                aria-valuemax={72}
+                aria-valuenow={Math.round(splitPercent)}
+                title="Drag to resize · Double-click to reset"
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  setIsResizing(true);
+                }}
+                onDoubleClick={() => setSplitPercent(DEFAULT_SPLIT_PERCENT)}
+                onKeyDown={(e) => {
+                  if (e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    setSplitPercent((p) => Math.max(32, p - 2));
+                  } else if (e.key === 'ArrowRight') {
+                    e.preventDefault();
+                    setSplitPercent((p) => Math.min(72, p + 2));
+                  } else if (e.key === 'Home') {
+                    e.preventDefault();
+                    setSplitPercent(DEFAULT_SPLIT_PERCENT);
+                  }
+                }}
+                className="hidden min-[900px]:flex w-5 shrink-0 items-center justify-center cursor-col-resize group focus-visible:outline-none"
+              >
+                <div
+                  className={`w-1 h-12 rounded-full transition-colors ${
+                    isResizing
+                      ? 'bg-[#157347] dark:bg-[#39A96B]'
+                      : 'bg-[#CFDCD4] dark:bg-[#274031] group-hover:bg-[#157347] dark:group-hover:bg-[#39A96B] group-focus-visible:bg-[#157347]'
+                  }`}
+                />
+              </div>
+
+              <div className="w-full min-[900px]:flex-1 min-w-0">
                 <VbaEditorPane
                   modules={modules}
                   activeModuleId={activeModuleId}
